@@ -1,0 +1,100 @@
+---
+title: "Homework 5"
+author: "Tarun Manoharan"
+date: "2024-02-29"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+[https://github.com/TarunMano/SDS315_HW5](https://github.com/TarunMano/SDS315_HW5)
+
+***
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=3, fig.width=4, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+```
+
+```{r echo = FALSE, message = FALSE}
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(mosaic)
+library(kableExtra)
+```
+
+## Problem 1 - Iron Bank
+```{r echo = FALSE}
+sim_bank = do(100000)*nflip(n = 2021, prob = 0.024)
+p = sum(sim_bank >= 70) / 100000
+ggplot(sim_bank,aes(x = nflip)) + geom_histogram(fill = "skyblue", binwidth = 1) +  geom_vline(xintercept = 70)
+```
+
+The null hypothesis that is being tested is that, over the long run, securities trades from the Iron Bank are flagged at the same 2.4% baseline rate as that of other traders. The test statistic used to measure the strength of evidence against the null hypothesis is the number of securities trades that are flagged out of 2021 trades. The p-value calculated is `r p`. This shows that the observed data is likely not consistent with the SEC's null hypothesis of that the baseline rate of trades flagged, which could show that the Iron Bank is flagging trades at a higher rate.  
+
+## Problem 2 
+```{r echo = FALSE}
+bites_sim = do(100000)*nflip(n = 50, prob = 0.03)
+p = sum(bites_sim >= 8) / 1000000
+ggplot(bites_sim,aes(x = nflip)) + geom_histogram(fill = "palegreen", bins = 10) +  geom_vline(xintercept = 8)
+```
+
+The null hypothesis being tested is that the average amount of restaurants that result in health code violations is 3%. The test statistic being used is the number of restaurants that result in health code violations, the p-value calculated was `r p`. This shows that the observed data for Gourmet Bites is not consistent with the Health Department's null hypothesis, and that is likely that Gourmet Bites is indeed violating health code. 
+
+## Problem 3
+
+### Part A
+```{r echo = FALSE}
+letter_frequencies = read.csv("letter_frequencies.csv")
+brown = read.table("brown_sentences.txt", sep = "\t")
+
+brown$chi = NA
+
+chi_square = function(sentence, freq_table) {
+  
+  clean_sentence = gsub("[^A-Za-z]", "", sentence)
+  clean_sentence = toupper(clean_sentence)
+  
+  observed_counts = table(factor(strsplit(clean_sentence, "")[[1]], levels = freq_table$Letter))
+  
+  total_letters = sum(observed_counts)
+  expected_counts = total_letters * freq_table$Probability
+  chi_squared_stat = sum((observed_counts - expected_counts)^2 / expected_counts)
+
+  return(chi_squared_stat)
+}
+
+for(x in 1:nrow(brown)) {
+  brown$chi[x] = chi_square(brown$V1[x], letter_frequencies)
+  
+}
+
+ggplot(brown) + geom_histogram(aes(x = chi), binwidth = 1, fill = "navy")
+```
+
+### Part B
+```{r echo = FALSE}
+sentences <- c(
+  "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+  "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+  "The museum’s new exhibit features ancient artifacts from various civilizations around the world.",
+  "He carefully examined the document, looking for any clues that might help solve the mystery.",
+  "The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.",
+  "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+  "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+  "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+  "The committee reviewed the proposal and provided many points of useful feedback to improve the project’s effectiveness.",
+  "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone’s expectations."
+)
+
+LLM_chi = tibble("Sentence" = 1:10, "P_Value" = rep(NA,10))
+for (x in 1:10) {
+  p = chi_square(sentences[x], letter_frequencies) / nrow(brown)
+  LLM_chi$P_Value[x] = round(p,3)
+}
+kbl(LLM_chi)
+```
+
+
+The sentence that was adjusted by an LLM was sentence 6, as it had the most variance in p-value , as compared to the rest of the p-values calculated from the 10 sentences. 
